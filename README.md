@@ -17,3 +17,93 @@ A unique feature of our model is its ability to differentiate between multiple s
 Stay tuned for more updates as we progress in our exciting journey!
 
 ---
+
+To start your project, you can follow these steps:
+
+1. **Environment Setup**: Set up a Python environment using  conda. Install necessary libraries like PyTorch Lightning, PyTorch, and any other libraries you think you might need.
+
+2. **Data Collection**: Collect or find a dataset of French speeches. You might need to look for datasets online or create one yourself.
+Biggest Non-Commercial French Language Dataset The SIWIS French Speech Synthesis Database includes high-quality French speech recordings and associated text files, aimed at building TTS systems, investigating multiple styles, and emphasis. Various sources such as parliament debates and novels were uttered by a professional French voice talent. A subset of the database contains emphasized words in many different contexts.
+
+== Syntax of file names: ==
+* For part 1,2,3 and 5:
+  [style]_[type]_[session]_[id].[ext] where:
+  - style = neutral (neut) / emphasised (emph) / expressive (expr)
+  - type = parliament (parl) / book (book) / siwis (siwis) / sus (sus) /
+chapter (chap)
+  - session = 2 digits
+  - id = 4 digits
+  - ext = wav / txt / lab
+* part4:
+  chap_full.[ext]
+  
+```
+SiwisFrenchSpeechSynthesisDatabase
+├── wavs
+│   ├── part1
+│   │   ├── neut_parl_s01_0001.wav
+│   │   ├── ...
+│   ├── part2
+│   │   ├── ...
+│   ├── part3
+│   │   ├── ...
+│   ├── part4
+│   │   ├── chap_full.wav
+│   ├── part5
+│   │   ├── ...
+└── text
+    ├── part1
+    │   ├── neut_parl_s01_0001.txt
+    │   ├── ...
+    ├── part2
+    │   ├── ...
+    ├── part3
+    │   ├── ...
+    ├── part4
+    │   ├── chap_full.txt
+    └── part5
+        ├── ...
+```
+
+Features: 9750 utterances from various sources more than ten hours of speech data freely available
+3. **Data Preprocessing**: Preprocess your data. This might involve converting audio files to a suitable format, normalizing audio levels, segmenting speeches into smaller chunks, etc.
+Pytorch dataloader streaming data as solution and HDF5 as data compressor for both voice and text.
+
+Preprocessing audio data is an important step in many machine learning tasks, including speech recognition, music classification, and audio event detection. Here are some common techniques:
+
+1. **Sampling Rate Conversion**: Audio files can have different sampling rates. You might need to resample them to a common rate for your task.
+
+2. **Mono Conversion**: If your audio files are stereo, you might need to convert them to mono. Many tasks don't benefit from stereo data and mono data is easier to work with.
+
+3. **Silence Removal**: Audio files can have silence at the beginning and end or between words in speech. Removing these can make your model's job easier.
+
+4. **Frame Extraction**: Audio signals are often split into short frames (e.g., 20-30ms), which are processed independently. This is based on the assumption that audio signals are stationary within such a short time period.
+
+5. **Feature Extraction**: Raw audio data is often transformed into a more compact representation. Common features include:
+
+   - **Spectrogram**: Shows the frequencies present in the audio over time.
+   - **Mel-Frequency Cepstral Coefficients (MFCCs)**: Mimic the human auditory system's response and are widely used in speech recognition.
+   - **Chroma Features**: Relate to the 12 different pitch classes and are used in music information retrieval.
+   - **Spectral Contrast**: Measures the difference in amplitude between peaks and valleys in a sound spectrum.
+
+6. **Normalization**: Features are often normalized (e.g., to have zero mean and unit variance) to make learning easier for the model.
+
+7. **Data Augmentation**: Techniques like time stretching, pitch shifting, adding noise can help to make the model more robust.
+
+Remember, the preprocessing steps depend on your specific task and the nature of your data. It's often a good idea to experiment with different approaches to see what works best.
+
+4. **Model Selection**: Research and select a suitable pre-trained model for speech recognition. You might want to look into models specifically trained for French language.
+
+5. **Training**: Use PyTorch Lightning to train your model on your dataset.
+
+6. **Evaluation**: Evaluate your model's performance. This might involve creating a test set of speeches and checking the accuracy of the transcriptions.
+
+7. **Integration of PyAnote**: Integrate PyAnote for speaker diarization (differentiating between speakers).
+
+8. **Testing**: Test the entire system together. Make sure the transcription is fast enough for real-time speech and that the speaker diarization is working correctly.
+
+9. **Iteration**: Based on your tests, you might need to go back to previous steps and make improvements.
+
+10. **Documentation**: Document your code and your process. This will be helpful for others who want to understand your project, and for you if you need to revisit the project in the future.
+
+Remember, this is a complex project and it's okay to take it one step at a time. Good luck!

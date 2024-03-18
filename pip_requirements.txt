@@ -1,0 +1,21 @@
+# Core
+numpy
+torch
+
+# Audio processing
+librosa
+soundfile
+pydub
+pyAudioAnalysis
+pyannote.audio
+
+# Data handling
+h5py
+pandas
+
+# Machine learning
+pytorch-lightning
+sklearn
+
+# Utilities
+tqdm

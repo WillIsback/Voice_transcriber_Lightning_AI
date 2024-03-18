@@ -1,2 +1,15 @@
 .lightning_studio
-.venv
+dataset
+
+# Ignore Python compiled files
+__pycache__/
+*.py[cod]
+
+# Ignore Python artifacts
+*.pyo
+*.pyd
+*.pyc
+*.so
+*.egg
+*.egg-info/
+dist/
