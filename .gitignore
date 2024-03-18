@@ -1,5 +1,7 @@
 .lightning_studio
 dataset
+models
+logs
 
 # Ignore Python compiled files
 __pycache__/
