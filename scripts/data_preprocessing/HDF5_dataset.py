@@ -25,7 +25,7 @@ class HDF5Dataset(Dataset):
         self.file.flush()
 
     def __getitem__(self, file_name):
-        audio = self.audio_data[file_name][:]
+        audio = self.audio_data[file_name][:, np.newaxis]
         transcription = self.transcriptions[file_name][:]
         return audio, transcription
 
@@ -128,7 +128,7 @@ class HDF5Dataset(Dataset):
             # Load the audio data and transcription from the HDF5 file
             hdf5_audio_data = self.audio_data[audio_data_key][()]
             hdf5_transcription = self.transcriptions[transcriptions_key][()]
-
+-
             # Write the audio data and transcription to .wav and .txt files
             sf.write(os.path.join(hdf5_directory_path, audio_data_key + '.wav'), hdf5_audio_data, 22050)
             with open(os.path.join(hdf5_directory_path, audio_data_key + '.txt'), 'w') as f:
@@ -138,4 +138,4 @@ class HDF5Dataset(Dataset):
             dry_run_audio_data, _ = sf.read(os.path.join(dry_run_directory_path, audio_data_key + '.wav'))
             with open(os.path.join(dry_run_directory_path, audio_data_key + '.txt'), 'r') as f:
                 dry_run_transcription = f.read()
-
+ 

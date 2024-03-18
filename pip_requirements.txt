@@ -1,6 +1,7 @@
 # Core
 numpy
 torch
+Cython
 
 # Audio processing
 librosa
@@ -8,6 +9,7 @@ soundfile
 pydub
 pyAudioAnalysis
 pyannote.audio
+nemo_toolkit\[all\]
 
 # Data handling
 h5py
