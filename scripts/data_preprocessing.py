@@ -5,28 +5,18 @@ import os
 import librosa
 
 def main(dry_run=False):
-    # Create an instance of your dataset
-    dataset = HDF5Dataset('dataset/compressed_dataset.h5')
-
     # Define the base directory path
     base_directory_path = 'dataset/SiwisFrenchSpeechSynthesisDatabase'
 
+    # Create an instance of the HDF5Dataset class in write mode
+    dataset = HDF5Dataset("/teamspace/studios/this_studio/dataset/compressed_dataset.h5", mode='w')
 
     try:
-        dataset.Preprocessing(base_directory_path, dry_run=dry_run)
-        if(dry_run):
-            
-            print("Dry run completed. No changes were saved.")
-            dataset.HDF5_Reader(base_directory_path)
-    except KeyboardInterrupt:
-        print("Program interrupted by user. Saving changes...")
-    except Exception as e:
-        print(f"An error occurred: {e}. Saving changes...")
+        # Call the Preprocessing method on the instance
+        dataset.Preprocessing(base_directory_path=base_directory_path, dry_run=dry_run)
     finally:
-        # Save and close the HDF5 file
-        dataset.file.flush()
+        # Close the file after writing to it
         dataset.file.close()
-        print("Changes saved and HDF5 file closed.")
-
+ 
 if __name__ == "__main__":
-    main(dry_run=False)  # Set dry_run to True to only print the changes without saving them
+    main(dry_run=False)  # Set dry_run to True to only print the changes without saving themj  

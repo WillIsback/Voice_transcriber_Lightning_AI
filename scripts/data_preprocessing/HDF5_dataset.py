@@ -8,32 +8,72 @@ import shutil
 import soundfile as sf
 import os
 from tqdm import tqdm
+from unidecode import unidecode
+import string
+
 
 class HDF5Dataset(Dataset):
-    def __init__(self, file_path):
-        self.file = h5py.File(file_path, 'a' if os.path.exists(file_path) else 'w')
-        if 'audio_data' not in self.file:
+    def __init__(self, file_path, mode='r'):
+        self.file = h5py.File(file_path, mode)
+        self.base_directory_path = 'dataset/SiwisFrenchSpeechSynthesisDatabase'
+        if mode == 'w':
+            self.file_names = []
             self.audio_data = self.file.create_group('audio_data')
-        else:
-            self.audio_data = self.file['audio_data']
-        if 'transcriptions' not in self.file:
             self.transcriptions = self.file.create_group('transcriptions')
         else:
+            self.file_names = list(self.file['audio_data'].keys())
+            self.audio_data = self.file['audio_data']
             self.transcriptions = self.file['transcriptions']
-
-    def flush(self):
-        self.file.flush()
-
-    def __getitem__(self, file_name):
-        audio = self.audio_data[file_name][:, np.newaxis]
-        transcription = self.transcriptions[file_name][:]
-        return audio, transcription
+        with open(os.path.join(self.base_directory_path, 'lists/all_text.list'), 'r') as f:
+            self.transcription_files = [os.path.join(self.base_directory_path, 'text', line.strip()) for line in f]
+        self.char_to_int, self.int_to_char = self._create_mapping()
 
     def __len__(self):
-        return len(self.audio_data)
+        return len(self.file_names)
 
-    def __del__(self):
-        self.file.close()
+    def __getitem__(self, index):
+        file_name = self.file_names[index]
+        audio = self.audio_data[file_name][:]
+        audio_len = len(audio)
+        transcription = self.transcriptions[file_name][:]
+        transcription_len = len(transcription)
+        return audio, audio_len, transcription, transcription_len
+
+    def transcription_to_tokens(self, transcription):
+        # Convert the transcription to lowercase
+        transcription = transcription.lower()
+        # Convert the transcription to a sequence of character tokens
+        tokens = list(transcription)
+        return tokens
+
+    def _create_mapping(self):
+        # Create a set of all characters that appear in the transcriptions
+        characters = set()
+        for transcription_file in self.transcription_files:
+            with open(transcription_file, 'r') as f:
+                transcription = f.read()
+                transcription = self.preprocess_text(transcription)
+                characters.update(transcription)
+        # Create a character-to-integer mapping
+        char_to_int = {char: i for i, char in enumerate(sorted(characters))}
+
+        # Create an integer-to-character mapping
+        int_to_char = {i: char for char, i in char_to_int.items()}
+
+        return char_to_int, int_to_char
+
+    def preprocess_text(self, transcription):
+        transcription = unidecode(transcription)
+        # Convert to lowercase
+        transcription = transcription.lower()
+
+        # Remove newline characters and replace '2' and '0' with appropriate words
+        transcription = transcription.replace('\n', ' ').replace('2', 'two').replace('0', 'zero')
+
+        # Remove punctuation
+        transcription = transcription.translate(str.maketrans('', '', string.punctuation))
+        
+        return transcription
 
     def needs_preprocessing(self, audio_file_path):
         audio, sample_rate = librosa.load(audio_file_path, sr=None)
@@ -74,7 +114,29 @@ class HDF5Dataset(Dataset):
             audio_files = audio_files[:10]
             transcription_files = transcription_files[:10]
 
-        for audio_file, transcription_file in tqdm(zip(audio_files, transcription_files), total=len(audio_files), ncols=100, desc=f'Preprocessing'):
+        audio_data = []
+        transcriptions = []
+        max_length_audio = 0
+        max_length_transcription = 0
+        
+
+        # First pass: determine the maximum lengths
+        for audio_file, transcription_file in tqdm(zip(audio_files, transcription_files), total=len(audio_files), ncols=100, desc='Determining max lengths'):
+            # Load the audio data
+            audio, sample_rate = librosa.load(audio_file, sr=None)
+
+            # Load the transcription
+            with open(transcription_file, 'r') as f:
+                transcription = f.read()
+
+            # Convert the transcription to a sequence of tokens
+            transcription_tokens = self.transcription_to_tokens(transcription)
+
+            # Update max_length_audio and max_length_transcription
+            max_length_audio = max(max_length_audio, len(audio))
+            max_length_transcription = max(max_length_transcription, len(transcription_tokens))
+        # Second pass: process and write the data
+        for audio_file, transcription_file in tqdm(zip(audio_files, transcription_files), total=len(audio_files), ncols=100, desc='Preprocessing'):
             # Load the audio data
             audio = self.needs_preprocessing(audio_file)
 
@@ -82,60 +144,21 @@ class HDF5Dataset(Dataset):
             with open(transcription_file, 'r') as f:
                 transcription = f.read()
 
-            # Get the file name without the extension
-            file_name = os.path.splitext(os.path.basename(audio_file))[0]
+            # Convert to unicode format convert to lowercase and remove punctuation
+            transcription = self.preprocess_text(transcription)
+            # Convert the transcription to a sequence of tokens
+            transcription_tokens = self.transcription_to_tokens(transcription)
 
-            if dry_run:
-                # Write the preprocessed audio data to a file
-                dry_run_directory_path = os.path.join(base_directory_path, 'dry_run')
-                os.makedirs(dry_run_directory_path, exist_ok=True)
-                sf.write(os.path.join(dry_run_directory_path, file_name + '.wav'), audio, 22050)  # Replace 22050 with your sample rate
+            # Convert the tokens to integers using the char_to_int mapping
+            transcription_tokens = [self.char_to_int[token] for token in transcription_tokens]
 
-                # Write the transcription to a file
-                with open(os.path.join(dry_run_directory_path, file_name + '.txt'), 'w') as f:
-                    f.write(transcription)
-                print(f"Writing audio data to HDF5 file: {audio}")
+            # Pad the audio data and transcription
+            audio = np.pad(audio, (0, max_length_audio - len(audio)))
+            transcription = np.pad(transcription_tokens, (0, max_length_transcription - len(transcription_tokens)))
 
-                self.audio_data.create_dataset(file_name, data=audio)
+            # Extract the file name from the audio file
+            file_name = os.path.basename(audio_file)
 
-                print(f"Writing transcription to HDF5 file: {transcription}")
-                self.transcriptions.create_dataset(file_name, data=transcription)
-            else:
-                # Add the preprocessed audio data and transcription to the HDF5 file
-                #print(f"Writing audio data to HDF5 file: {audio}")
-                self.audio_data.create_dataset(file_name, data=audio)
-
-                #print(f"Writing transcription to HDF5 file: {transcription}")
-                self.transcriptions.create_dataset(file_name, data=transcription)
-
-
-    def HDF5_Reader(self, base_directory_path):
-        print("Reading the HDF5 file...")
-        # Get all entries
-        audio_data_keys = list(self.audio_data.keys())
-        transcriptions_keys = list(self.transcriptions.keys())
-
-        # Base directory for dry run results
-        dry_run_directory_path = os.path.join(base_directory_path, 'dry_run')
-
-        # Directory for HDF5 results
-        hdf5_directory_path = os.path.join(base_directory_path, 'hdf5_results')
-        if not os.path.exists(hdf5_directory_path):
-            os.makedirs(hdf5_directory_path)
-
-        # Check each entry
-        for audio_data_key, transcriptions_key in zip(audio_data_keys, transcriptions_keys):
-            # Load the audio data and transcription from the HDF5 file
-            hdf5_audio_data = self.audio_data[audio_data_key][()]
-            hdf5_transcription = self.transcriptions[transcriptions_key][()]
--
-            # Write the audio data and transcription to .wav and .txt files
-            sf.write(os.path.join(hdf5_directory_path, audio_data_key + '.wav'), hdf5_audio_data, 22050)
-            with open(os.path.join(hdf5_directory_path, audio_data_key + '.txt'), 'w') as f:
-                f.write(hdf5_transcription.decode('utf-8'))
-
-            # Load the dry run results
-            dry_run_audio_data, _ = sf.read(os.path.join(dry_run_directory_path, audio_data_key + '.wav'))
-            with open(os.path.join(dry_run_directory_path, audio_data_key + '.txt'), 'r') as f:
-                dry_run_transcription = f.read()
- 
+            # Add the preprocessed audio data and transcription to the HDF5 file
+            self.audio_data.create_dataset(file_name, data=audio)
+            self.transcriptions.create_dataset(file_name, data=transcription, dtype=np.int32)
